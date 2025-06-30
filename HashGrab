@@ -334,23 +334,10 @@ do -- equipgun / unequipgun / buygun
     local foundKeys = errorHandleMultiSearch(displayGunList, { "UnequipGun", "EquipGun", "BuyGun" })
 
     if foundKeys then
-        print("🔍 [GunKey Debug] Found keys:", #foundKeys)
-        for index, keyData in ipairs(foundKeys) do
-            local key = keyData[1]
-            print(("🔑 [GunKey Debug] Index %d: Key = %s"):format(index, key))
-        end
-
         -- Order: [1] = UNEQUIP, [2] = EQUIP, [3] = BUY
         networkKeys.UnequipGun = foundKeys[1] and foundKeys[1][1]
         networkKeys.EquipGun   = foundKeys[2] and foundKeys[2][1]
         networkKeys.BuyGun     = foundKeys[3] and foundKeys[3][1]
-
-        print("✅ Final Gun Key Mapping (by order):")
-        print("  ➤ UnequipGun =", networkKeys.UnequipGun)
-        print("  ➤ EquipGun   =", networkKeys.EquipGun)
-        print("  ➤ BuyGun     =", networkKeys.BuyGun)
-    else
-        warn("❌ [GunKey Debug] Failed to find keys for GunShopUI.displayList")
     end
 end
 
