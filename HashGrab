@@ -331,47 +331,24 @@ do -- equipgun / unequipgun / buygun
         return getproto(require(gameFolder.GunShop.GunShopUI).displayList, 1)
     end)
     
-    local foundKeys, orginalConstants, modifiedConstants, prefixIndexes = errorHandleMultiSearch(displayGunList, { "UneqipGun", "EquipGun", "BuyGun" })
-
-    -- if foundKeys then
-    --     for index = 1, 3 do
-    --         local key = foundKeys[index] and foundKeys[index][1] or "Failed to fetch key"
-    --         local originalPrefixIndex = table.find(orginalConstants, modifiedConstants[prefixIndexes[index]])
-    --         local previousConstant = originalPrefixIndex and orginalConstants[originalPrefixIndex - 1]
-    
-    --         if previousConstant == "GetEquipped" then
-    --             networkKeys.UnequipGun = key
-    --         elseif previousConstant == "doesPlayerOwn" then
-    --             networkKeys.EquipGun = key
-    --         else
-    --             networkKeys.BuyGun = key
-    --         end
-    --     end
-    -- end
+    local foundKeys = errorHandleMultiSearch(displayGunList, { "UnequipGun", "EquipGun", "BuyGun" })
 
     if foundKeys then
         print("🔍 [GunKey Debug] Found keys:", #foundKeys)
-        for index = 1, 3 do
-            local keyData = foundKeys[index]
-            local key = keyData and keyData[1] or "Failed to fetch key"
-            local prefixIndex = prefixIndexes[index]
-            local prefixConstant = prefixIndex and modifiedConstants[prefixIndex]
-            local originalPrefixIndex = prefixConstant and table.find(orginalConstants, prefixConstant)
-            local previousConstant = originalPrefixIndex and orginalConstants[originalPrefixIndex - 1] or "N/A"
-
-            print(("🔑 [GunKey Debug] Index %d: Key = %s | Prefix = %s | Previous = %s"):format(index, key, tostring(prefixConstant), tostring(previousConstant)))
-
-            if previousConstant == "GetEquipped" then
-                print("✅ Matched 'GetEquipped' → Setting UnequipGun =", key)
-                networkKeys.UnequipGun = key
-            elseif previousConstant == "doesPlayerOwn" then
-                print("✅ Matched 'doesPlayerOwn' → Setting EquipGun =", key)
-                networkKeys.EquipGun = key
-            else
-                print("✅ Fallback match → Setting BuyGun =", key)
-                networkKeys.BuyGun = key
-            end
+        for index, keyData in ipairs(foundKeys) do
+            local key = keyData[1]
+            print(("🔑 [GunKey Debug] Index %d: Key = %s"):format(index, key))
         end
+
+        -- Order: [1] = UNEQUIP, [2] = EQUIP, [3] = BUY
+        networkKeys.UnequipGun = foundKeys[1] and foundKeys[1][1]
+        networkKeys.EquipGun   = foundKeys[2] and foundKeys[2][1]
+        networkKeys.BuyGun     = foundKeys[3] and foundKeys[3][1]
+
+        print("✅ Final Gun Key Mapping (by order):")
+        print("  ➤ UnequipGun =", networkKeys.UnequipGun)
+        print("  ➤ EquipGun   =", networkKeys.EquipGun)
+        print("  ➤ BuyGun     =", networkKeys.BuyGun)
     else
         warn("❌ [GunKey Debug] Failed to find keys for GunShopUI.displayList")
     end
