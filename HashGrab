@@ -326,17 +326,58 @@ do -- falldamage
     end
 end
 
-do -- equipgun / unequipgun / buygun
+do -- gun funcs
     local displayGunList = errorHandle(function()
         return getproto(require(gameFolder.GunShop.GunShopUI).displayList, 1)
     end)
 
-    local foundKeys, orginalConstants, modifiedConstants, prefixIndexes = errorHandleMultiSearch(displayGunList, { "UnequipGun", "EquipGun", "BuyGun" })
+    local foundKeys, originalConstants, _, prefixIndexes
+    local success, r1, r2, r3, r4 = pcall(function()
+        return fetchKey(displayGunList, nil, true)
+    end)
 
-    if foundKeys and #foundKeys >= 3 then
-        networkKeys.EquipGun = foundKeys[1][1]
-        networkKeys.UnequipGun   = foundKeys[3][1]
-        networkKeys.BuyGun     = foundKeys[2][1]
+    if success and r1 and #r1 == 3 then
+        foundKeys, originalConstants, _, prefixIndexes = r1, r2, r3, r4
+
+        local keyMap = {}
+        local assigned = {}
+
+        for i, keyData in ipairs(foundKeys) do
+            local key = keyData[1]
+            local prefixIndex = prefixIndexes[i]
+
+            local prevConst = ""
+            if typeof(prefixIndex) == "number" and originalConstants and originalConstants[prefixIndex - 1] then
+                prevConst = tostring(originalConstants[prefixIndex - 1]):lower()
+            end
+            
+            if prevConst:find("doesplayerown") then
+                keyMap.BuyGun = key
+                assigned[key] = "BuyGun"
+            elseif prevConst:find("getequipped") then
+                keyMap.EquipGun = key
+                assigned[key] = "EquipGun"
+            end
+        end
+
+        for _, keyData in ipairs(foundKeys) do
+            local key = keyData[1]
+            if not assigned[key] then
+                if keyMap.EquipGun then
+                    keyMap.UnequipGun = key
+                    assigned[key] = "UnequipGun"
+                else
+                    keyMap.EquipGun = key
+                    assigned[key] = "EquipGun"
+                end
+            end
+        end
+
+        networkKeys.EquipGun   = keyMap.EquipGun
+        networkKeys.UnequipGun = keyMap.UnequipGun
+        networkKeys.BuyGun     = keyMap.BuyGun
+    else
+        warn("Failed to fetch 3 gun keys.")
     end
 end
 
