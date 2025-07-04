@@ -1,0 +1,4 @@
+{
+  "getequipped": "UnequipGun",
+  "doesplayerown": "EquipGun"
+}
