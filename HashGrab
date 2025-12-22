@@ -206,8 +206,10 @@ do -- jointeam
         for _, p in ipairs(getprotos(teamChooseUI.Show)) do
             if type(p) == "function" then
                 local con = getconstants(p)
-                if table.find(con, "st") and table.find(con, "r") then
-                    return p 
+                for _, v in ipairs(con) do
+                    if type(v) == "string" and #v == 1 then
+                        return p
+                    end
                 end
             end
         end
