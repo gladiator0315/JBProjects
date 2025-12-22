@@ -353,93 +353,93 @@ do -- falldamage
     end
 end
 
-do -- Dynamic GunShop key detection (semantic order: Unequip → Equip → Buy)
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local gunShopUI = require(ReplicatedStorage:WaitForChild("Game").GunShop.GunShopUI)
-    local displayListFunc = gunShopUI.displayList
-    if not displayListFunc then return end
+-- do -- Dynamic GunShop key detection (semantic order: Unequip → Equip → Buy)
+--     local ReplicatedStorage = game:GetService("ReplicatedStorage")
+--     local gunShopUI = require(ReplicatedStorage:WaitForChild("Game").GunShop.GunShopUI)
+--     local displayListFunc = gunShopUI.displayList
+--     if not displayListFunc then return end
 
-    local function safe(f, ...)
-        local ok, res = pcall(f, ...)
-        return ok and res or nil
-    end
+--     local function safe(f, ...)
+--         local ok, res = pcall(f, ...)
+--         return ok and res or nil
+--     end
 
-    local bestProto, candidateKeys
-    for i = 1, safe(getnproto, displayListFunc) or 20 do
-        local proto = safe(getproto, displayListFunc, i, false)
-        if not proto then continue end
+--     local bestProto, candidateKeys
+--     for i = 1, safe(getnproto, displayListFunc) or 20 do
+--         local proto = safe(getproto, displayListFunc, i, false)
+--         if not proto then continue end
 
-        local consts = safe(getconstants, proto) or {}
-        local joined = table.concat(consts, " "):lower()
+--         local consts = safe(getconstants, proto) or {}
+--         local joined = table.concat(consts, " "):lower()
 
-        if joined:find("doesplayerown") or joined:find("getequipped") then
-            local found = {fetchKey(proto, nil, true)}
-            if found and found[1] and #found[1] == 3 then
-                bestProto = proto
-                candidateKeys = found[1]
-                break
-            end
-        end
-    end
+--         if joined:find("doesplayerown") or joined:find("getequipped") then
+--             local found = {fetchKey(proto, nil, true)}
+--             if found and found[1] and #found[1] == 3 then
+--                 bestProto = proto
+--                 candidateKeys = found[1]
+--                 break
+--             end
+--         end
+--     end
 
-    if not candidateKeys then return end
+--     if not candidateKeys then return end
 
-    ----------------------------------------------------------------
-    -- Detect which branch corresponds to which logical action
-    ----------------------------------------------------------------
-    local mapping = { Unequip = nil, Equip = nil, Buy = nil }
+--     ----------------------------------------------------------------
+--     -- Detect which branch corresponds to which logical action
+--     ----------------------------------------------------------------
+--     local mapping = { Unequip = nil, Equip = nil, Buy = nil }
 
-    local function scan(func)
-        if type(func) ~= "function" then return end
+--     local function scan(func)
+--         if type(func) ~= "function" then return end
 
-        local consts = safe(getconstants, func) or {}
-        local text = table.concat(consts, " "):lower()
+--         local consts = safe(getconstants, func) or {}
+--         local text = table.concat(consts, " "):lower()
 
-        -- identify each condition contextually
-        if text:find("getequipped") then
-            mapping.Unequip = mapping.Unequip or func
-        elseif text:find("doesplayerown") then
-            mapping.Equip = mapping.Equip or func
-        elseif text:find("fireserver") and not (text:find("getequipped") or text:find("doesplayerown")) then
-            mapping.Buy = mapping.Buy or func
-        end
+--         -- identify each condition contextually
+--         if text:find("getequipped") then
+--             mapping.Unequip = mapping.Unequip or func
+--         elseif text:find("doesplayerown") then
+--             mapping.Equip = mapping.Equip or func
+--         elseif text:find("fireserver") and not (text:find("getequipped") or text:find("doesplayerown")) then
+--             mapping.Buy = mapping.Buy or func
+--         end
 
-        local count = safe(getnproto, func) or 0
-        for i = 1, count do
-            scan(safe(getproto, func, i))
-        end
-    end
-    scan(bestProto)
+--         local count = safe(getnproto, func) or 0
+--         for i = 1, count do
+--             scan(safe(getproto, func, i))
+--         end
+--     end
+--     scan(bestProto)
 
-    ----------------------------------------------------------------
-    -- Assign keys explicitly following the real in-game logic
-    ----------------------------------------------------------------
-    local keyA = candidateKeys[1] and candidateKeys[1][1] or "Unknown"
-    local keyB = candidateKeys[2] and candidateKeys[2][1] or "Unknown"
-    local keyC = candidateKeys[3] and candidateKeys[3][1] or "Unknown"
+--     ----------------------------------------------------------------
+--     -- Assign keys explicitly following the real in-game logic
+--     ----------------------------------------------------------------
+--     local keyA = candidateKeys[1] and candidateKeys[1][1] or "Unknown"
+--     local keyB = candidateKeys[2] and candidateKeys[2][1] or "Unknown"
+--     local keyC = candidateKeys[3] and candidateKeys[3][1] or "Unknown"
 
-    -- figure out which constant appeared near which check
-    local function findClosest(func)
-        local consts = safe(getconstants, func) or {}
-        for _, k in ipairs(candidateKeys) do
-            local key = k[1]
-            for _, c in ipairs(consts) do
-                if type(c) == "string" and key:sub(1, 3) == c:sub(1, 3) then
-                    return key
-                end
-            end
-        end
-    end
+--     -- figure out which constant appeared near which check
+--     local function findClosest(func)
+--         local consts = safe(getconstants, func) or {}
+--         for _, k in ipairs(candidateKeys) do
+--             local key = k[1]
+--             for _, c in ipairs(consts) do
+--                 if type(c) == "string" and key:sub(1, 3) == c:sub(1, 3) then
+--                     return key
+--                 end
+--             end
+--         end
+--     end
 
-    local unequipKey = mapping.Unequip and findClosest(mapping.Unequip) or keyA
-    local equipKey   = mapping.Equip   and findClosest(mapping.Equip)   or keyB
-    local buyKey     = mapping.Buy     and findClosest(mapping.Buy)     or keyC
+--     local unequipKey = mapping.Unequip and findClosest(mapping.Unequip) or keyA
+--     local equipKey   = mapping.Equip   and findClosest(mapping.Equip)   or keyB
+--     local buyKey     = mapping.Buy     and findClosest(mapping.Buy)     or keyC
 
-    -- Final assignment (hard enforce correct logic order)
-    networkKeys.UnequipGun = unequipKey
-    networkKeys.EquipGun   = equipKey
-    networkKeys.BuyGun     = buyKey
-end
+--     -- Final assignment (hard enforce correct logic order)
+--     networkKeys.UnequipGun = unequipKey
+--     networkKeys.EquipGun   = equipKey
+--     networkKeys.BuyGun     = buyKey
+-- end
 
 do -- ragdoll
     keyFunctions.Ragdoll = function()
