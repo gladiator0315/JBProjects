@@ -201,37 +201,6 @@ do -- damage
     end
 end
 
--- do -- jointeam
---     keyFunctions.JoinTeam = function()
---         for _, p in ipairs(getprotos(teamChooseUI.Show)) do
---             if type(p) == "function" then
---                 for _, target in ipairs(getprotos(p)) do 
---                     if type(target) == "function" then
---                         local con = getconstants(target)
---                         if con then
---                             local isGarbage = false
---                             for _, v in ipairs(con) do
---                                 if v == "FindFirstChild" then
---                                     isGarbage = true
---                                     break
---                                 end
---                             end
-
---                             if not isGarbage then
---                                 for _, v in ipairs(con) do
---                                     if type(v) == "string" and #v > 6 and v ~= "FireServer" then
---                                         return target
---                                     end
---                                 end
---                             end
---                         end
---                     end
---                 end
---             end
---         end
---     end
--- end
-
 do -- jointeam
     keyFunctions.JoinTeam = function()
         for i, p in ipairs(getprotos(teamChooseUI.Show)) do
