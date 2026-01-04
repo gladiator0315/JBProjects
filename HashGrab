@@ -201,14 +201,56 @@ do -- damage
     end
 end
 
+-- do -- jointeam
+--     keyFunctions.JoinTeam = function()
+--         for _, p in ipairs(getprotos(teamChooseUI.Show)) do
+--             if type(p) == "function" then
+--                 for _, target in ipairs(getprotos(p)) do 
+--                     if type(target) == "function" then
+--                         local con = getconstants(target)
+--                         if con then
+--                             local isGarbage = false
+--                             for _, v in ipairs(con) do
+--                                 if v == "FindFirstChild" then
+--                                     isGarbage = true
+--                                     break
+--                                 end
+--                             end
+
+--                             if not isGarbage then
+--                                 for _, v in ipairs(con) do
+--                                     if type(v) == "string" and #v > 6 and v ~= "FireServer" then
+--                                         return target
+--                                     end
+--                                 end
+--                             end
+--                         end
+--                     end
+--                 end
+--             end
+--         end
+--     end
+-- end
+
 do -- jointeam
     keyFunctions.JoinTeam = function()
-        for _, p in ipairs(getprotos(teamChooseUI.Show)) do
+        for i, p in ipairs(getprotos(teamChooseUI.Show)) do
             if type(p) == "function" then
-                local con = getconstants(p)
-                for _, v in ipairs(con) do
-                    if type(v) == "string" and #v == 1 then
-                        return p
+                for j, target in ipairs(getprotos(p)) do 
+                    if type(target) == "function" then
+                        local con = getconstants(target)
+                        if con then
+                            for _, v in ipairs(con) do
+                                if type(v) == "string" and #v > 6 then
+                                    local HasUpperCase = v:find("%u")
+                                    local HasNumber    = v:find("%d")
+                                    if not HasUpperCase and HasNumber then
+                                        return target
+                                    end
+
+                                end
+                            end
+                        end
                     end
                 end
             end
@@ -485,6 +527,7 @@ end
 --// Fetch keys from functions
 
 for keyName, keyFunction in keyFunctions do
+
     local success, errorMessage = pcall(function()
         networkKeys[keyName] = fetchKey(keyFunction()) or "Failed to fetch key"
     end)
