@@ -177,6 +177,73 @@ local function errorHandleMultiSearch(callerFunction, keyNames)
     return foundKeys, orginalConstants, modifiedConstants, prefixIndexes
 end
 
+--// Deep Scanner for Join/Switch (Cross-compatible)
+local function scanForFunc(rootObj, mode)
+    local queue = {{obj = rootObj, d = 0}}
+    local visited = {}
+    
+    while #queue > 0 do
+        local cur = table.remove(queue, 1)
+        local obj = cur.obj
+        local d = cur.d
+        
+        -- Limit depth, skip visited
+        if d <= 8 and not visited[obj] then
+            visited[obj] = true
+            
+            if type(obj) == "function" then
+                local s, c = pcall(getconstants, obj)
+                if s and c then
+                    for _, v in ipairs(c) do
+                        if type(v) == "string" then
+                            if mode == "Join" then
+                                if #v > 5 and #v < 15 and v:match("^[a-z0-9]+$") and not v:find("Team") and not v:find("Input") and v ~= "FireServer" then
+                                    if table.find(c, "FireServer") then return obj end
+                                end
+                            end
+
+                            if mode == "Switch" then
+                                if #v >= 8 and v:match("^[a-z0-9]+$") and v:match("%d") then 
+                                local lower = v:lower()
+                                if not lower:find("team") 
+                                    and not lower:find("parent") 
+                                    and not lower:find("input")
+                                    and not lower:find("element") then
+                                        return obj
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                
+                -- Ups/Protos
+                local _, ups = pcall(getupvalues, obj)
+                if ups then 
+                    for _, u in ipairs(ups) do table.insert(queue, {obj=u, d=d+1}) end 
+                end
+                
+                local _, pros = pcall(getprotos, obj)
+                if pros then 
+                    for _, p in ipairs(pros) do table.insert(queue, {obj=p, d=d+1}) end 
+                end
+            
+            elseif type(obj) == "table" then
+                -- Used pcall(pairs) because Roact tables will error if we define custom keys, 
+                local success, iter, state, idx = pcall(pairs, obj)
+                if success then
+                    for k, v in iter, state, idx do
+                        if type(v)=="function" or type(v)=="table" then 
+                            table.insert(queue, {obj=v, d=d+1}) 
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return nil
+end
+
 --// Fetch functions for keys
 
 do -- redeemcode
@@ -203,51 +270,16 @@ end
 
 do -- jointeam
     keyFunctions.JoinTeam = function()
-        for i, p in ipairs(getprotos(teamChooseUI.Show)) do
-            if type(p) == "function" then
-                for j, target in ipairs(getprotos(p)) do 
-                    if type(target) == "function" then
-                        local con = getconstants(target)
-                        if con then
-                            for _, v in ipairs(con) do
-                                if type(v) == "string" and #v > 6 then
-                                    local HasUpperCase = v:find("%u")
-                                    local HasNumber    = v:find("%d")
-                                    if not HasUpperCase and HasNumber then
-                                        return target
-                                    end
-
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
+        local UI = require(ReplicatedStorage.TeamSelect.TeamChooseUI)
+        return scanForFunc(UI.Show, "Join")
     end
 end
 
 do -- switchteam
     keyFunctions.SwitchTeam = function()
         local SideUI = require(gameFolder.SidebarUI)
-        for _, p in ipairs(getprotos(SideUI.Init)) do
-            if type(p) == "function" then
-                for _, p1 in ipairs(getprotos(p)) do
-                    if type(p1) == "function" then
-                        for _, target in ipairs(getprotos(p1)) do
-                            if type(target) == "function" then
-                                local con = getconstants(target)
-                                for _, v in ipairs(con) do
-                                    if type(v) == "string" and #v >= 8 and v ~= "Parent" then
-                                        return target
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
+        local result = scanForFunc(SideUI.Init, "Switch")
+        return result
     end
 end
 
@@ -363,94 +395,6 @@ do -- falldamage
         return getupvalue(defaultActions.onJumpPressed._handlerListHead._next._fn, 2)
     end
 end
-
--- do -- Dynamic GunShop key detection (semantic order: Unequip → Equip → Buy)
---     local ReplicatedStorage = game:GetService("ReplicatedStorage")
---     local gunShopUI = require(ReplicatedStorage:WaitForChild("Game").GunShop.GunShopUI)
---     local displayListFunc = gunShopUI.displayList
---     if not displayListFunc then return end
-
---     local function safe(f, ...)
---         local ok, res = pcall(f, ...)
---         return ok and res or nil
---     end
-
---     local bestProto, candidateKeys
---     for i = 1, safe(getnproto, displayListFunc) or 20 do
---         local proto = safe(getproto, displayListFunc, i, false)
---         if not proto then continue end
-
---         local consts = safe(getconstants, proto) or {}
---         local joined = table.concat(consts, " "):lower()
-
---         if joined:find("doesplayerown") or joined:find("getequipped") then
---             local found = {fetchKey(proto, nil, true)}
---             if found and found[1] and #found[1] == 3 then
---                 bestProto = proto
---                 candidateKeys = found[1]
---                 break
---             end
---         end
---     end
-
---     if not candidateKeys then return end
-
---     ----------------------------------------------------------------
---     -- Detect which branch corresponds to which logical action
---     ----------------------------------------------------------------
---     local mapping = { Unequip = nil, Equip = nil, Buy = nil }
-
---     local function scan(func)
---         if type(func) ~= "function" then return end
-
---         local consts = safe(getconstants, func) or {}
---         local text = table.concat(consts, " "):lower()
-
---         -- identify each condition contextually
---         if text:find("getequipped") then
---             mapping.Unequip = mapping.Unequip or func
---         elseif text:find("doesplayerown") then
---             mapping.Equip = mapping.Equip or func
---         elseif text:find("fireserver") and not (text:find("getequipped") or text:find("doesplayerown")) then
---             mapping.Buy = mapping.Buy or func
---         end
-
---         local count = safe(getnproto, func) or 0
---         for i = 1, count do
---             scan(safe(getproto, func, i))
---         end
---     end
---     scan(bestProto)
-
---     ----------------------------------------------------------------
---     -- Assign keys explicitly following the real in-game logic
---     ----------------------------------------------------------------
---     local keyA = candidateKeys[1] and candidateKeys[1][1] or "Unknown"
---     local keyB = candidateKeys[2] and candidateKeys[2][1] or "Unknown"
---     local keyC = candidateKeys[3] and candidateKeys[3][1] or "Unknown"
-
---     -- figure out which constant appeared near which check
---     local function findClosest(func)
---         local consts = safe(getconstants, func) or {}
---         for _, k in ipairs(candidateKeys) do
---             local key = k[1]
---             for _, c in ipairs(consts) do
---                 if type(c) == "string" and key:sub(1, 3) == c:sub(1, 3) then
---                     return key
---                 end
---             end
---         end
---     end
-
---     local unequipKey = mapping.Unequip and findClosest(mapping.Unequip) or keyA
---     local equipKey   = mapping.Equip   and findClosest(mapping.Equip)   or keyB
---     local buyKey     = mapping.Buy     and findClosest(mapping.Buy)     or keyC
-
---     -- Final assignment (hard enforce correct logic order)
---     networkKeys.UnequipGun = unequipKey
---     networkKeys.EquipGun   = equipKey
---     networkKeys.BuyGun     = buyKey
--- end
 
 do -- ragdoll
     keyFunctions.Ragdoll = function()
