@@ -310,11 +310,21 @@ do -- arrest / pickpocket / breakout
         return getupvalue(getupvalue(require(ReplicatedStorage.App.CharacterBinder)._classAddedSignal._handlerListHead._fn, 1), 2)
     end)
 
-    keyFunctions.Arrest = function(backup)
-        if backup then
-            return getupvalue(getupvalue(characterInteractFunction, 1), 7)
-        else
-            return getupvalue(characterInteractFunction, 1)
+    keyFunctions.Arrest = function()
+        local characterInteractFunction = getupvalue(getupvalue(
+            require(ReplicatedStorage.App.CharacterBinder)._classAddedSignal._handlerListHead._fn, 1), 2)
+        
+        for _, v in pairs(getupvalues(characterInteractFunction)) do
+            if type(v) == "function" then
+                for _, u in pairs(getupvalues(v)) do
+                    if type(u) == "function" then
+                        local s, c = pcall(getconstants, u)
+                        if s and table.find(c, "FireServer") and table.find(c, "Name") and #c < 15 and not table.find(c, "Sit") then
+                            return u
+                        end
+                    end
+                end
+            end
         end
     end
 
