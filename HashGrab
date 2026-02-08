@@ -229,7 +229,6 @@ local function scanForFunc(rootObj, mode)
                 end
             
             elseif type(obj) == "table" then
-                -- Used pcall(pairs) because Roact tables will error if we define custom keys, 
                 local success, iter, state, idx = pcall(pairs, obj)
                 if success then
                     for k, v in iter, state, idx do
@@ -270,8 +269,7 @@ end
 
 do -- jointeam
     keyFunctions.JoinTeam = function()
-        local UI = require(ReplicatedStorage.TeamSelect.TeamChooseUI)
-        return scanForFunc(UI.Show, "Join")
+        return getproto(teamChooseUI.Show, 3)
     end
 end
 
