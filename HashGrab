@@ -177,74 +177,7 @@ local function errorHandleMultiSearch(callerFunction, keyNames)
     return foundKeys, orginalConstants, modifiedConstants, prefixIndexes
 end
 
---// Deep Scanner for Join/Switch (Cross-compatible)
-local function scanForFunc(rootObj, mode)
-    local queue = {{obj = rootObj, d = 0}}
-    local visited = {}
-    
-    while #queue > 0 do
-        local cur = table.remove(queue, 1)
-        local obj = cur.obj
-        local d = cur.d
-        
-        -- Limit depth, skip visited
-        if d <= 8 and not visited[obj] then
-            visited[obj] = true
-            
-            if type(obj) == "function" then
-                local s, c = pcall(getconstants, obj)
-                if s and c then
-                    for _, v in ipairs(c) do
-                        if type(v) == "string" then
-                            if mode == "Join" then
-                                if #v > 5 and #v < 15 and v:match("^[a-z0-9]+$") and not v:find("Team") and not v:find("Input") and v ~= "FireServer" then
-                                    if table.find(c, "FireServer") then return obj end
-                                end
-                            end
-
-                            if mode == "Switch" then
-                                if #v >= 8 and v:match("^[a-z0-9]+$") and v:match("%d") then 
-                                local lower = v:lower()
-                                if not lower:find("team") 
-                                    and not lower:find("parent") 
-                                    and not lower:find("input")
-                                    and not lower:find("element") then
-                                        return obj
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-                
-                -- Ups/Protos
-                local _, ups = pcall(getupvalues, obj)
-                if ups then 
-                    for _, u in ipairs(ups) do table.insert(queue, {obj=u, d=d+1}) end 
-                end
-                
-                local _, pros = pcall(getprotos, obj)
-                if pros then 
-                    for _, p in ipairs(pros) do table.insert(queue, {obj=p, d=d+1}) end 
-                end
-            
-            elseif type(obj) == "table" then
-                local success, iter, state, idx = pcall(pairs, obj)
-                if success then
-                    for k, v in iter, state, idx do
-                        if type(v)=="function" or type(v)=="table" then 
-                            table.insert(queue, {obj=v, d=d+1}) 
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return nil
-end
-
 --// Fetch functions for keys
-
 do -- redeemcode
     keyFunctions.RedeemCode = function()
         return getproto(require(gameFolder.Codes).Init, 8)
@@ -276,8 +209,7 @@ end
 do -- switchteam
     keyFunctions.SwitchTeam = function()
         local SideUI = require(gameFolder.SidebarUI)
-        local result = scanForFunc(SideUI.Init, "Switch")
-        return result
+        return getproto(getproto(getproto(SideUI.Init, 3), 1), 1)
     end
 end
 
