@@ -251,11 +251,7 @@ do -- arrest / pickpocket / breakout
     end
 
     keyFunctions.Arrest = function()
-        for _, v in pairs(getupvalues(HandcuffFunc)) do
-            if type(v) == "function" then
-                return v
-            end
-        end
+        return HandcuffFunc
     end
 end
 
