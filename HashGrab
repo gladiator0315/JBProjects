@@ -44,7 +44,6 @@ local keyFunctions = {}
 local blacklistedConstants = {}
 local keyCache = {}
 local backupKeys = { -- could do getinfo numparams but this is faster
-    Arrest = true,
     Breakout = true,
     Eject = true
 }
@@ -132,14 +131,14 @@ local function fetchKey(callerFunction, keyIndex, multiSearch)
             end
         end
     end
-    
+
     -- cleanse invalid keys
     for index, keyInfo in foundKeys do
         if table.find(prefixIndexes, keyInfo[2]) then -- invalid keys will have a suffix of a prefix used in another key
             table.remove(foundKeys, index)
         end
     end
-    
+
     keyCache[callerFunction] = foundKeys
 
     if multiSearch then
@@ -251,7 +250,11 @@ do -- arrest / pickpocket / breakout
     end
 
     keyFunctions.Arrest = function()
-        return HandcuffFunc
+        for _, v in pairs(getupvalues(HandcuffFunc)) do
+            if type(v) == "function" then
+                return v
+            end
+        end
     end
 end
 
